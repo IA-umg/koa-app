@@ -68,7 +68,7 @@ export default function PageLoader({ children }: { children: React.ReactNode }) 
                   height: `${100 / ROWS}%`,
                   left: `${(col / COLS) * 100}%`,
                   top: `${(row / ROWS) * 100}%`,
-                  backgroundColor: "#251823",
+                  backgroundColor: "#3FAB88",
                   opacity: 0,
                 }}
               />

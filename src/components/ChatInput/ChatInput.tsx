@@ -74,6 +74,7 @@ export function ChatInput({
         size="icon"
         className="h-9 w-9 shrink-0 rounded-xl"
         aria-label="Enviar mensaje"
+        style={{color:"#3E7063"}}
       >
         <Send className="h-4 w-4" />
       </Button>
@@ -87,7 +88,10 @@ export function ChatInput({
             <ChevronDown className="h-2.5 w-2.5" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-0 bg-zinc-900 border-zinc-800 text-zinc-400">
+        <DropdownMenuContent side="top"
+          align="end" 
+          className="min-w-0 bg-zinc-900 border-zinc-800 text-zinc-400"
+        >
           {MODELS.map((m) => (
             <DropdownMenuItem key={m.value} onClick={() => {setModel(m); setComplex(true)}} className="text-xs hover:text-white cursor-pointer">
               {m.label}

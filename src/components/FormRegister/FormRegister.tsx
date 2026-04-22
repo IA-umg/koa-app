@@ -90,7 +90,7 @@ export default function FormRegister() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div
         className="w-full max-w-sm rounded-2xl border border-border bg-black p-8 shadow-2xl overflow-hidden"
-        style={{ boxShadow: "0 0 40px 0 #251823" }}
+        style={{ boxShadow: "0 0 40px 0 #223D36" }}
       >
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground">Crear cuenta</h1>
@@ -179,7 +179,7 @@ export default function FormRegister() {
             disabled={formik.isSubmitting}
             className="w-full mt-2 font-semibold"
             style={{
-              backgroundColor: "#251823",
+              backgroundColor: "#3FAB88",
               color: "oklch(0.08 0.01 260)",
               borderRadius: 5,
             }}
@@ -200,7 +200,7 @@ export default function FormRegister() {
           <a
             href="/login"
             className="font-medium transition-colors"
-            style={{ color: "oklch(0.6 0.3 264)" }}
+            style={{ color: "#3E7063" }}
           >
             Inicia sesión
           </a>

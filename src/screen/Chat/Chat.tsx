@@ -31,7 +31,6 @@ export default function Chat() {
       }
 
       const response = await post<ChatResponse>("/api/query", data, token)
-      console.log(response)
 
       if (!response.ok || !response.data) {
         throw new Error(response.error || "Error al obtener respuesta")
