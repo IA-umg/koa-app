@@ -14,7 +14,7 @@ import { useDataStore } from "@/store/model"
 
 const MODELS = [
   { value: "gemini", label: "Gemini" },
-  { value: "grok", label: "Grok" },
+  { value: "groq", label: "Groq" },
 ]
 
 interface ChatInputProps {
