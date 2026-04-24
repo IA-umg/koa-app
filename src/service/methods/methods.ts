@@ -98,3 +98,13 @@ export const postStream = async (
 
   return response;
 };
+
+export const postForm = <T>(url: string, formData: FormData, token?: string) => {
+  const config: AxiosRequestConfig = {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Content-Type": "multipart/form-data",
+    },
+  };
+  return handleRequest<T>(api.post<T>(url, formData, config));
+};

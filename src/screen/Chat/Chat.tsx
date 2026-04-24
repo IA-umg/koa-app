@@ -7,6 +7,8 @@ import { useMutation } from "@tanstack/react-query"
 import { post, postStream } from "@/service/methods/methods"
 import { useAuthStore } from "@/store/auth"
 import { useDataStore } from "@/store/model"
+import { FileUploader, UploadedFile } from "@/components/FileUploader/FileUploader"
+import { MobileUploadTrigger } from "@/components/MobileUploadTrigger/MobileUploadTrigger"
 
 export interface SourceFragment {
   id: number | string
@@ -28,7 +30,7 @@ interface ChatResponse {
   fragmentosUsados?: SourceFragment[]
 }
 
-function generateId() {
+export function generateId() {
   return Math.random().toString(36).substring(2, 9)
 }
 
@@ -37,6 +39,7 @@ export default function Chat() {
   const token = useAuthStore((s) => s.auth?.token)
   const { complex, model } = useDataStore()
   const abortRef = useRef<AbortController | null>(null)
+  // const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
 
   const chatMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -213,8 +216,9 @@ export default function Chat() {
     chatMutation.mutate(content)
   }, [chatMutation])
 
-  return (
-    <main className="mx-auto flex h-screen w-full flex-col">
+
+return (
+    <main className="flex h-screen w-full overflow-hidden">
       <ChatContainer
         messages={messages}
         onSendMessage={handleSendMessage}
