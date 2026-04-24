@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
+import { get } from "@/service/methods/methods"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -17,19 +18,42 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+export const MATERIAS = [
+  "General",
+  "Inteligencia Artificial",
+  "Bases de Datos",
+  "Programación",
+  "Matemáticas",
+  "Física",
+  "Ingeniería de Software",
+  "Redes",
+]
+
+export const PERIODOS = [
+  "General",
+  "Semestre 1",
+  "Semestre 2",
+  "Apuntes de Clase",
+  "Tareas / Ejercicios",
+  "Presentaciones",
+]
+
 export interface UploadedFile {
   id: string
   name: string
   size: number
   type: string
-  status: "uploading" | "completed" | "error"
+  status: "pending" | "uploading" | "completed" | "error"
   progress: number
   file?: File
+  materia?: string
+  periodo?: string
 }
 
 interface FileUploaderProps {
   files: UploadedFile[]
   onFilesAdd: (files: File[]) => void
+  onUploadAll?: (metadata: { materia: string; periodo: string; reemplazar: boolean }) => void
   maxFiles?: number
   acceptedTypes?: string[]
 }
@@ -40,6 +64,17 @@ function formatFileSize(bytes: number): string {
   const sizes = ["Bytes", "KB", "MB", "GB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+}
+
+interface RagStats {
+  totalDocumentos: number
+  totalFuentes: number
+  latencia?: number
+  config?: {
+    embeddingModel: string
+    chunkSize: number
+    chunkOverlap: number
+  }
 }
 
 function getFileIcon(type: string) {
@@ -69,11 +104,41 @@ function getFileTypeColor(type: string): string {
 export function FileUploader({
   files,
   onFilesAdd,
+  onUploadAll,
   maxFiles = 20,
-  acceptedTypes = [".pdf", ".txt", ".doc", ".docx", ".md", ".json", ".csv"],
+  acceptedTypes = [".pdf", ".txt", ".docx", ".md"],
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [materia, setMateria] = useState("General")
+  const [periodo, setPeriodo] = useState("General")
+  const [reemplazar, setReemplazar] = useState(true)
+  const [stats, setStats] = useState<RagStats | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const start = performance.now()
+      const res = await get<{ok: boolean, totalDocumentos: number, totalFuentes: number, config: any}>("/api/stats")
+      const end = performance.now()
+      if (res.ok && res.data) {
+        setStats({ ...res.data, latencia: Math.round(end - start) })
+      }
+    } catch (e) {
+      console.error("Failed to fetch stats", e)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
+
+  // Refetch stats when there are no more uploading files but there are completed ones
+  useEffect(() => {
+    if (files.length > 0 && files.every(f => f.status === "completed" || f.status === "error" || f.status === "pending")) {
+       const hasRecentCompletion = files.some(f => f.status === "completed")
+       if (hasRecentCompletion) fetchStats()
+    }
+  }, [files, fetchStats])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -126,7 +191,7 @@ export function FileUploader({
             </div>
             <h2 className="text-lg font-medium text-foreground">
               Base de conocimiento
-            </h2>          
+            </h2>
           </div>
           <Badge variant="secondary" className="font-mono">
             {files.length}/{maxFiles}
@@ -158,7 +223,39 @@ export function FileUploader({
         )}
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-4 p-4">
+      <CardContent className="flex flex-1 flex-col gap-4 p-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* Metadata Inputs */}
+        <div className="flex flex-col gap-3 pb-2 border-b border-border/50">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">
+              Materia / Asignatura
+            </label>
+            <select
+              value={materia}
+              onChange={(e) => setMateria(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {MATERIAS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">
+              Tipo / Período
+            </label>
+            <select
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {PERIODOS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="reemplazar-cb" checked={reemplazar} onChange={(e) => setReemplazar(e.target.checked)} className="rounded border-input bg-background" />
+            <label htmlFor="reemplazar-cb" className="text-xs text-muted-foreground cursor-pointer">Reemplazar archivos si ya existen</label>
+          </div>
+        </div>
+
         {/* Drop Zone */}
         <div
           onDragOver={handleDragOver}
@@ -271,6 +368,39 @@ export function FileUploader({
             <p className="mt-1 text-xs text-muted-foreground">
               Sube documentos para alimentar tu chatbot
             </p>
+          </div>
+        )}
+
+        {/* Upload Button */}
+        {files.some(f => f.status === "pending") && onUploadAll && (
+          <div className="pt-2">
+            <button
+              onClick={() => onUploadAll({ materia, periodo, reemplazar })}
+              className="w-full flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              <Upload className="h-4 w-4" /> Procesar e Ingestar Documentos
+            </button>
+          </div>
+        )}
+
+        {/* Stats */}
+        {stats && (
+          <div className="mt-4 pt-4 border-t border-border/50 text-xs text-muted-foreground space-y-1.5">
+            <p className="font-medium text-foreground mb-2 flex items-center gap-2">
+               Estadísticas del Sistema
+            </p>
+            <div className="flex items-center justify-between">
+               <span>Total Documentos:</span> 
+               <span className="font-medium text-foreground">{stats.totalDocumentos}</span>
+            </div>
+            <div className="flex items-center justify-between">
+               <span>Fuentes Únicas:</span> 
+               <span className="font-medium text-foreground">{stats.totalFuentes}</span>
+            </div>
+            <div className="flex items-center justify-between">
+               <span>Tamaño de Chunk:</span> 
+               <span className="font-medium text-foreground">{stats.config?.chunkSize || 900} / {stats.config?.chunkOverlap || 120}</span>
+            </div>
           </div>
         )}
       </CardContent>

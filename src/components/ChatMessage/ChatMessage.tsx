@@ -14,6 +14,7 @@ export interface Message {
   role: "user" | "assistant"
   timestamp?: Date
   sources?: SourceFragment[]
+  latency?: number
 }
 
 interface ChatMessageProps {
@@ -157,7 +158,7 @@ function processContentWithCitations(
   // Then replace individual [1], [2], [3] with citation markers
   processed = processed.replace(/\[(\d+)\]/g, (match, num) => {
     const n = parseInt(num, 10)
-    if (n >= 1 && n <= sources.length) {
+    if (n >= 1) {
       return `%%CITE_${n}%%`
     }
     return match
@@ -366,18 +367,23 @@ export function ChatMessage({ message }: ChatMessageProps) {
             })()}
           </div>
         )}
-        {message.timestamp && (
-          <span
-            className={cn(
-              "mt-1 block text-[10px] opacity-70",
-              isUser ? "text-right" : "text-left"
+        {(message.timestamp || message.latency) && (
+          <div className={cn("mt-1.5 flex items-center gap-2 text-[10px] opacity-70", isUser ? "justify-end" : "justify-start")}>
+            {message.timestamp && (
+              <span>
+                {message.timestamp.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
             )}
-          >
-            {message.timestamp.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
+            {message.latency !== undefined && (
+              <span className="flex items-center gap-1 text-emerald-500/90 font-medium">
+                <span className="w-1 h-1 rounded-full bg-emerald-500/90"></span>
+                {(message.latency / 1000).toFixed(1)}s
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>

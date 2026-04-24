@@ -90,7 +90,7 @@ export function ChatInput({
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top"
           align="end" 
-          className="min-w-0 bg-zinc-900 border-zinc-800 text-zinc-400"
+          className="min-w-[100px] w-auto bg-zinc-900 border-zinc-800 text-zinc-400"
         >
           {MODELS.map((m) => (
             <DropdownMenuItem key={m.value} onClick={() => {setModel(m); setComplex(true)}} className="text-xs hover:text-white cursor-pointer">

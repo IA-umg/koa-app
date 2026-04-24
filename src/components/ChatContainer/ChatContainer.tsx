@@ -2,14 +2,21 @@
 
 import { useRef, useEffect, useState, useCallback } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Bot, Paperclip } from "lucide-react"
+import { Bot, Paperclip, Filter } from "lucide-react"
 import { ChatMessage, Message } from "@/components/ChatMessage/ChatMessage"
 import { TypingIndicator } from "@/components/TypingIndicator/TypingIndicator"
 import { ChatInput } from "@/components/ChatInput/ChatInput"
 import Header from "../header/Header"
 import { MobileUploadTrigger } from "../MobileUploadTrigger/MobileUploadTrigger"
-import { FileUploader, UploadedFile } from "../FileUploader/FileUploader"
+import { FileUploader, UploadedFile, MATERIAS, PERIODOS } from "../FileUploader/FileUploader"
 import { generateId } from "@/screen/Chat/Chat"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Tooltip,
   TooltipContent,
@@ -26,12 +33,20 @@ interface ChatContainerProps {
   messages: Message[]
   onSendMessage: (content: string) => void
   isLoading?: boolean
+  materiaFilter?: string
+  setMateriaFilter?: (val: string) => void
+  periodoFilter?: string
+  setPeriodoFilter?: (val: string) => void
 }
 
 export function ChatContainer({
   messages,
   onSendMessage,
   isLoading = false,
+  materiaFilter = "",
+  setMateriaFilter = () => {},
+  periodoFilter = "",
+  setPeriodoFilter = () => {},
 }: ChatContainerProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -41,16 +56,16 @@ export function ChatContainer({
     setIsPanelOpen(prev => !prev)
   }, [])
 
-  const uploadFileToAPI = useCallback(async (uploadedFile: UploadedFile) => {
+  const uploadFileToAPI = useCallback(async (uploadedFile: UploadedFile, reemplazar: boolean) => {
     if (!uploadedFile.file) return
 
     const formData = new FormData()
-    formData.append("curso", "Bases de Datos")
-    formData.append("materia", "SQL")
-    formData.append("reemplazar", "true")
+    formData.append("curso", uploadedFile.periodo || "General")
+    formData.append("materia", uploadedFile.materia || "General")
+    formData.append("reemplazar", reemplazar ? "true" : "false")
     formData.append("metadata", JSON.stringify({
-      profesor: "Castillo",
-      semestre: "2026-1",
+      profesor: "No especificado",
+      semestre: uploadedFile.periodo || "No especificado",
     }))
     formData.append("file", uploadedFile.file)
 
@@ -81,15 +96,27 @@ export function ChatContainer({
       name: file.name,
       size: file.size,
       type: file.type,
-      status: "uploading" as const,
+      status: "pending" as const,
       progress: 0,
       file,
     }))
 
     setUploadedFiles((prev) => [...prev, ...newFiles])
 
-    newFiles.forEach((newFile) => {
-      // Progreso visual hasta 85% mientras espera la API
+    if (!isPanelOpen) setIsPanelOpen(true)
+  }, [isPanelOpen])
+
+  const handleUploadAll = useCallback((metadata: { materia: string; periodo: string; reemplazar: boolean }) => {
+    const pendingFiles = uploadedFiles.filter(f => f.status === "pending")
+    if (pendingFiles.length === 0) return
+
+    setUploadedFiles(prev => 
+      prev.map(f => f.status === "pending" ? { ...f, status: "uploading", materia: metadata.materia, periodo: metadata.periodo } : f)
+    )
+
+    pendingFiles.forEach(file => {
+      const fileWithMeta = { ...file, materia: metadata.materia, periodo: metadata.periodo, status: "uploading" as const }
+      
       let progress = 0
       const interval = setInterval(() => {
         progress += Math.random() * 20
@@ -98,17 +125,15 @@ export function ChatContainer({
         } else {
           setUploadedFiles(prev =>
             prev.map(f =>
-              f.id === newFile.id ? { ...f, progress: Math.round(progress) } : f
+              f.id === file.id ? { ...f, progress: Math.round(progress) } : f
             )
           )
         }
       }, 200)
 
-      uploadFileToAPI(newFile).finally(() => clearInterval(interval))
+      uploadFileToAPI(fileWithMeta, metadata.reemplazar).finally(() => clearInterval(interval))
     })
-
-    if (!isPanelOpen) setIsPanelOpen(true)
-  }, [isPanelOpen, uploadFileToAPI])
+  }, [uploadedFiles, uploadFileToAPI])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -128,7 +153,7 @@ export function ChatContainer({
           }`}
         >
           <div className="w-80 h-full">
-            <FileUploader files={uploadedFiles} onFilesAdd={handleFilesAdd} />
+            <FileUploader files={uploadedFiles} onFilesAdd={handleFilesAdd} onUploadAll={handleUploadAll} />
           </div>
         </div>
 
@@ -156,6 +181,37 @@ export function ChatContainer({
               <div ref={scrollRef} />
             </div>
           </ScrollArea>
+          
+          {/* Barra de Filtros de Búsqueda Elegante */}
+          <div className="w-full max-w-2xl mx-auto px-4 py-2 flex items-center justify-end gap-2 border-t border-border/10 bg-background/30 backdrop-blur-sm z-10">
+             <div className="flex items-center gap-1.5 mr-auto pl-2 opacity-50">
+               <Filter className="h-3 w-3" />
+               <span className="text-[10px] font-semibold uppercase tracking-widest hidden sm:inline-block">Contexto</span>
+             </div>
+             
+             <Select value={materiaFilter} onValueChange={setMateriaFilter}>
+               <SelectTrigger className="h-7 text-xs bg-muted/30 border-transparent hover:bg-muted/60 focus:ring-0 w-auto min-w-[140px] rounded-full px-3">
+                 <SelectValue placeholder="Materia" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="all">Todas las materias</SelectItem>
+                 {MATERIAS.map(m => m !== "General" && <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                 <SelectItem value="General">General</SelectItem>
+               </SelectContent>
+             </Select>
+
+             <Select value={periodoFilter} onValueChange={setPeriodoFilter}>
+               <SelectTrigger className="h-7 text-xs bg-muted/30 border-transparent hover:bg-muted/60 focus:ring-0 w-auto min-w-[150px] rounded-full px-3">
+                 <SelectValue placeholder="Período" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="all">Todos los períodos</SelectItem>
+                 {PERIODOS.map(p => p !== "General" && <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                 <SelectItem value="General">General</SelectItem>
+               </SelectContent>
+             </Select>
+          </div>
+
           <ChatInput onSend={onSendMessage} disabled={isLoading} />
         </div>
       </div>
@@ -181,7 +237,11 @@ export function ChatContainer({
         </Tooltip>
       </TooltipProvider>
 
-      <MobileUploadTrigger files={uploadedFiles} onFilesAdd={handleFilesAdd} />
+      <MobileUploadTrigger
+        files={uploadedFiles}
+        onFilesAdd={handleFilesAdd}
+        onUploadAll={handleUploadAll}
+      />
     </div>
   )
 }
