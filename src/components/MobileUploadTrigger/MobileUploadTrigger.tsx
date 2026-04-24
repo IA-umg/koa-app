@@ -4,9 +4,11 @@ import { FileUploader, UploadedFile } from "../FileUploader/FileUploader"
 export function MobileUploadTrigger({
   files,
   onFilesAdd,
+  onUploadAll,
 }: {
   files: UploadedFile[]
   onFilesAdd: (files: File[]) => void
+  onUploadAll?: (metadata: { materia: string; periodo: string; reemplazar: boolean }) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -73,6 +75,7 @@ export function MobileUploadTrigger({
               <FileUploader
                 files={files}
                 onFilesAdd={onFilesAdd}
+                onUploadAll={onUploadAll}
               />
             </div>
           </div>
